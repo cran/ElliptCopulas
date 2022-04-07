@@ -11,7 +11,10 @@ EllDistrEst(
   grid,
   h,
   Kernel = "epanechnikov",
-  a = 1
+  a = 1,
+  mpfr = FALSE,
+  precBits = 100,
+  dopb = TRUE
 )
 }
 \arguments{
@@ -28,7 +31,16 @@ EllDistrEst(
 \item{Kernel}{kernel used for the smoothing}
 
 \item{a}{tuning parameter to improve the performance at 0.
-See Liebscher (2005), Example p.210}
+See Liebscher (2005), Example p.210.}
+
+\item{mpfr}{if \code{mpfr = TRUE}, multiple precision floating point is set.
+This allows for a higher accuracy, at the expense of computing times.
+It is recommended to use this option for higher dimensions.}
+
+\item{precBits}{number of precBits used for floating point precision
+(only used if \code{mpfr = TRUE}).}
+
+\item{dopb}{if \code{dopb = TRUE}, a progressbar is displayed.}
 }
 \value{
 the values of the density generator of the elliptical copula,
@@ -40,11 +52,31 @@ of an elliptical distribution by kernel smoothing.
 }
 \examples{
 # Comparison between the estimated and true generator of the Gaussian distribution
-X = matrix(rnorm(5000*3), ncol = 3)
-grid = seq(0,5,by=0.01)
+X = matrix(rnorm(500*3), ncol = 3)
+grid = seq(0,5,by=0.1)
 g_3 = EllDistrEst(X = X, grid = grid, a = 0.7, h=0.05)
+g_3mpfr = EllDistrEst(X = X, grid = grid, a = 0.7, h=0.05,
+                      mpfr = TRUE, precBits = 20)
 plot(grid, g_3, type = "l")
 lines(grid, exp(-grid/2)/(2*pi)^{3/2}, col = "red")
+
+# In higher dimensions
+\donttest{
+d = 250
+X = matrix(rnorm(500*d), ncol = d)
+grid = seq(0, 400, by = 25)
+true_g = exp(-grid/2) / (2*pi)^{d/2}
+
+g_d = EllDistrEst(X = X, grid = grid, a = 100, h=40)
+
+g_dmpfr = EllDistrEst(X = X, grid = grid, a = 100, h=40,
+                      mpfr = TRUE, precBits = 10000)
+ylim = c(min(c(true_g, as.numeric(g_dmpfr[which(g_dmpfr>0)]))),
+         max(c(true_g, as.numeric(g_dmpfr)), na.rm=TRUE) )
+plot(grid, g_dmpfr, type = "l", col = "red", ylim = ylim, log = "y")
+lines(grid, g_d, type = "l")
+lines(grid, true_g, col = "blue")
+}
 
 }
 \references{
@@ -56,4 +88,7 @@ Journal of Multivariate Analysis, 92(1), 205.
 \seealso{
 \code{\link{EllDistrSim}} for the simulation of elliptical distribution samples,
 \code{\link{EllCopEst}} for the estimation of elliptical copulas.
+}
+\author{
+Alexis Derumigny, Rutger van der Spek
 }
