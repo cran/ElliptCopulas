@@ -1,6 +1,6 @@
-8259747f9fa9c15323b46244ad4492d3 *DESCRIPTION
+6947d22fc1d51ad490072f3c0c7e5f14 *DESCRIPTION
 cff07391020c368f5a41c6e30945bc13 *NAMESPACE
-176a8d47cb0cc9ab0fcad1f4a5ded650 *NEWS.md
+42c511e8f097aaa767e84957869e8203 *NEWS.md
 d1b181c4aeeac7bde002499785cf231d *R/EllCopEst.R
 f9a8511baee85e2523bcad5a21175cce *R/EllCopLikelihood.R
 0e21f9c4490305156c4bdabd7a11310c *R/EllCopNormalization.R
@@ -8,12 +8,12 @@ b1e41dfbcd00b193f20d05bdcf50cb6e *R/EllCopSim.R
 3c46c65f4771db00fd285107af1ccdf6 *R/EllDistrEst.R
 0772bc55dc5fa17d4ae591be145286f5 *R/EllDistrSim.R
 1281c3127cdafaa8e05da8a3c58dd1d5 *R/EllDistrSimCond.R
-e10a2a31aa2146180a3720591c54a511 *R/KTMatrixEst.R
-8a12e77cddd68503d041ded988e83474 *R/TEllDistrEst.R
+34959ba39942b02a5e966c300fe22162 *R/KTMatrixEst.R
+663a0dbd3176ada1d9db1d38a598c95b *R/TEllDistrEst.R
 f18073cc21a33d5d31420d97879a8559 *R/kernelChoice.R
 7c04ff3f78431ba43c180a97c62fed1e *R/numericalAnalysis.R
 65afa676b7f7c9e8849609be59b5a1a2 *README.md
-02b17b9ea57d135d4d586bbafece4e28 *build/partial.rdb
+9ecb0bdfb906213cc54af05f9a8fb645 *build/partial.rdb
 df392569b043b0a4f5a9fcb5a878c8a1 *man/DensityGenerator.normalize.Rd
 db88e6f00c3b7d0a054d63b4c3ea4bd8 *man/EllCopEst.Rd
 7bb2bd7fae82d1666c1a1a75052fc57e *man/EllCopLikelihood.Rd
