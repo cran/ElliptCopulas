@@ -18,29 +18,41 @@ EllDistrEst(
 )
 }
 \arguments{
-\item{X}{matrix of observations.}
+\item{X}{a matrix of size \eqn{n \times d}, assumed to be \eqn{n} i.i.d. observations
+(rows) of a \eqn{d}-dimensional elliptical distribution.}
 
-\item{mu}{(estimated) mean of X.}
+\item{mu}{mean of X. This can be the true value or an estimate. It must be
+a vector of dimension \eqn{d}.}
 
-\item{Sigma_m1}{(estimated) inverse of the covariance matrix of X.}
+\item{Sigma_m1}{inverse of the covariance matrix of X.
+This can be the true value or an estimate. It must be
+a matrix of dimension \eqn{d \times d}.}
 
-\item{grid}{grid of values on which to estimate the density generator}
+\item{grid}{grid of values of \eqn{\xi} at which we want to estimate the
+density generator.}
 
-\item{h}{bandwidth of the kernel}
+\item{h}{bandwidth of the kernel. Can be either a number or a vector of the
+size \code{length(grid)}.}
 
-\item{Kernel}{kernel used for the smoothing}
+\item{Kernel}{name of the kernel. Possible choices are
+\code{"gaussian"}, \code{"epanechnikov"}, \code{"triangular"}.}
 
 \item{a}{tuning parameter to improve the performance at 0.
-See Liebscher (2005), Example p.210.}
+Can be either a number or a vector of the
+size \code{length(grid)}. If this is a vector, the code will need to allocate
+a matrix of size \code{nrow(X) * length(grid)} which can be prohibitive in
+some cases.}
 
-\item{mpfr}{if \code{mpfr = TRUE}, multiple precision floating point is set.
-This allows for a higher accuracy, at the expense of computing times.
+\item{mpfr}{if \code{mpfr = TRUE}, multiple precision floating point is used
+via the package \link[Rmpfr:Rmpfr]{Rmpfr}.
+This allows for a higher (numerical) accuracy, at the expense of computing time.
 It is recommended to use this option for higher dimensions.}
 
 \item{precBits}{number of precBits used for floating point precision
 (only used if \code{mpfr = TRUE}).}
 
-\item{dopb}{if \code{dopb = TRUE}, a progressbar is displayed.}
+\item{dopb}{a Boolean value.
+If \code{dopb = TRUE}, a progress bar is displayed.}
 }
 \value{
 the values of the density generator of the elliptical copula,
@@ -49,6 +61,33 @@ estimated at each point of the \code{grid}.
 \description{
 This function uses Liebscher's algorithm to estimate the density generator
 of an elliptical distribution by kernel smoothing.
+A continuous elliptical distribution has a density of the form
+\deqn{f_X(x) = {|\Sigma|}^{-1/2}
+g\left( (x-\mu)^\top \, \Sigma^{-1} \, (x-\mu) \right),
+}
+where \eqn{x \in \mathbb{R}^d},
+\eqn{\mu \in \mathbb{R}^d} is the mean,
+\eqn{\Sigma} is a \eqn{d \times d} positive-definite matrix
+and a function \eqn{g: \mathbb{R}_+ \rightarrow \mathbb{R}_+}, called the
+density generator of \eqn{X}.
+The goal is to estimate \eqn{g} at some point \eqn{\xi}, by
+\deqn{
+\widehat{g}_{n,h,a}(\xi)
+:= \dfrac{\xi^{\frac{-d+2}{2}} \psi_a'(\xi)}{n h s_d}
+\sum_{i=1}^n
+  K\left( \dfrac{ \psi_a(\xi) - \psi_a(\xi_i) }{h} \right)
++ K\left( \dfrac{ \psi_a(\xi) + \psi_a(\xi_i) }{h} \right),
+}
+where
+\eqn{s_d := \pi^{d/2} / \Gamma(d/2)},
+\eqn{\Gamma} is the Gamma function,
+\eqn{h} and \eqn{a} are tuning parameters (respectively the bandwidth and a
+parameter controlling the bias at \eqn{\xi = 0}),
+\eqn{\psi_a(\xi) := -a + (a^{d/2} + \xi^{d/2})^{2/d},}
+\eqn{\xi \in \mathbb{R}}, \eqn{K} is a kernel function and
+\eqn{\xi_i := (X_i - \mu)^\top \, \Sigma^{-1} \, (X_i - \mu),
+}
+for a sample \eqn{X_1, \dots, X_n}.
 }
 \examples{
 # Comparison between the estimated and true generator of the Gaussian distribution
@@ -84,10 +123,26 @@ Liebscher, E. (2005).
 A semiparametric density estimator based on elliptical distributions.
 Journal of Multivariate Analysis, 92(1), 205.
 \doi{10.1016/j.jmva.2003.09.007}
+
+The function \eqn{\psi_a} is introduced in Liebscher (2005), Example p.210.
 }
 \seealso{
-\code{\link{EllDistrSim}} for the simulation of elliptical distribution samples,
-\code{\link{EllCopEst}} for the estimation of elliptical copulas.
+\itemize{
+\item \code{\link{EllDistrSim}} for the simulation of elliptical distribution samples.
+
+\item \code{\link{estim_tilde_AMSE}} for the estimation of a component of
+the asymptotic mean-square error (AMSE) of this estimator
+\eqn{\widehat{g}_{n,h,a}(\xi)}, assuming \eqn{h} has been optimally chosen.
+
+\item \code{\link{EllDistrEst.adapt}} for the adaptive nonparametric estimation
+of the generator of an elliptical distribution.
+
+\item \code{\link{EllDistrDerivEst}} for the nonparametric estimation of the
+derivatives of the generator.
+
+\item \code{\link{EllCopEst}} for the estimation of elliptical copulas
+density generators.
+}
 }
 \author{
 Alexis Derumigny, Rutger van der Spek

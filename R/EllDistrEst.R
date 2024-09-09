@@ -3,22 +3,54 @@
 #'
 #' This function uses Liebscher's algorithm to estimate the density generator
 #' of an elliptical distribution by kernel smoothing.
+#' A continuous elliptical distribution has a density of the form
+#' \deqn{f_X(x) = {|\Sigma|}^{-1/2}
+#' g\left( (x-\mu)^\top \, \Sigma^{-1} \, (x-\mu) \right),
+#' }
+#' where \eqn{x \in \mathbb{R}^d},
+#' \eqn{\mu \in \mathbb{R}^d} is the mean,
+#' \eqn{\Sigma} is a \eqn{d \times d} positive-definite matrix
+#' and a function \eqn{g: \mathbb{R}_+ \rightarrow \mathbb{R}_+}, called the
+#' density generator of \eqn{X}.
+#' The goal is to estimate \eqn{g} at some point \eqn{\xi}, by
+#' \deqn{
+#' \widehat{g}_{n,h,a}(\xi)
+#' := \dfrac{\xi^{\frac{-d+2}{2}} \psi_a'(\xi)}{n h s_d}
+#' \sum_{i=1}^n
+#'   K\left( \dfrac{ \psi_a(\xi) - \psi_a(\xi_i) }{h} \right)
+#' + K\left( \dfrac{ \psi_a(\xi) + \psi_a(\xi_i) }{h} \right),
+#' }
+#' where
+#' \eqn{s_d := \pi^{d/2} / \Gamma(d/2)},
+#' \eqn{\Gamma} is the Gamma function,
+#' \eqn{h} and \eqn{a} are tuning parameters (respectively the bandwidth and a
+#' parameter controlling the bias at \eqn{\xi = 0}),
+#' \eqn{\psi_a(\xi) := -a + (a^{d/2} + \xi^{d/2})^{2/d},}
+#' \eqn{\xi \in \mathbb{R}}, \eqn{K} is a kernel function and
+#' \eqn{\xi_i := (X_i - \mu)^\top \, \Sigma^{-1} \, (X_i - \mu),
+#' }
+#' for a sample \eqn{X_1, \dots, X_n}.
 #'
-#' @param X matrix of observations.
-#' @param mu (estimated) mean of X.
-#' @param Sigma_m1 (estimated) inverse of the covariance matrix of X.
+#' @template param-X-elliptical
+#' @template param-mu
+#' @template param-Sigma_m1
 #'
-#' @param grid grid of values on which to estimate the density generator
-#' @param h bandwidth of the kernel
-#' @param Kernel kernel used for the smoothing
+#' @param grid grid of values of \eqn{\xi} at which we want to estimate the
+#' density generator.
+#'
+#' @param h bandwidth of the kernel. Can be either a number or a vector of the
+#' size \code{length(grid)}.
+#'
+#' @template param-Kernel
+#'
 #' @param a tuning parameter to improve the performance at 0.
-#' See Liebscher (2005), Example p.210.
-#' @param mpfr if \code{mpfr = TRUE}, multiple precision floating point is set.
-#' This allows for a higher accuracy, at the expense of computing times.
-#' It is recommended to use this option for higher dimensions.
-#' @param precBits number of precBits used for floating point precision
-#' (only used if \code{mpfr = TRUE}).
-#' @param dopb if \code{dopb = TRUE}, a progressbar is displayed.
+#'  Can be either a number or a vector of the
+#' size \code{length(grid)}. If this is a vector, the code will need to allocate
+#' a matrix of size \code{nrow(X) * length(grid)} which can be prohibitive in
+#' some cases.
+#'
+#' @template param-mpfr
+#' @template param-dopb
 #'
 #' @return the values of the density generator of the elliptical copula,
 #' estimated at each point of the `grid`.
@@ -28,8 +60,24 @@
 #' Journal of Multivariate Analysis, 92(1), 205.
 #' \doi{10.1016/j.jmva.2003.09.007}
 #'
-#' @seealso \code{\link{EllDistrSim}} for the simulation of elliptical distribution samples,
-#' \code{\link{EllCopEst}} for the estimation of elliptical copulas.
+#' The function \eqn{\psi_a} is introduced in Liebscher (2005), Example p.210.
+#'
+#' @seealso \itemize{
+#' \item \code{\link{EllDistrSim}} for the simulation of elliptical distribution samples.
+#'
+#' \item \code{\link{estim_tilde_AMSE}} for the estimation of a component of
+#' the asymptotic mean-square error (AMSE) of this estimator
+#' \eqn{\widehat{g}_{n,h,a}(\xi)}, assuming \eqn{h} has been optimally chosen.
+#'
+#' \item \code{\link{EllDistrEst.adapt}} for the adaptive nonparametric estimation
+#' of the generator of an elliptical distribution.
+#'
+#' \item \code{\link{EllDistrDerivEst}} for the nonparametric estimation of the
+#' derivatives of the generator.
+#'
+#' \item \code{\link{EllCopEst}} for the estimation of elliptical copulas
+#' density generators.
+#' }
 #'
 #' @examples
 #' # Comparison between the estimated and true generator of the Gaussian distribution
@@ -62,8 +110,6 @@
 #' @author Alexis Derumigny, Rutger van der Spek
 #'
 #' @export
-#' @importClassesFrom Rmpfr mpfr mpfrMatrix
-#' @importFrom Rmpfr mean
 #'
 EllDistrEst <- function(X, mu = 0, Sigma_m1 = diag(d),
                         grid, h, Kernel = "epanechnikov", a = 1,
@@ -83,41 +129,87 @@ EllDistrEst <- function(X, mu = 0, Sigma_m1 = diag(d),
     # h = Rmpfr::mpfr(h, precBits = precBits)
     # s_d = Rmpfr::Const("pi")^(d/2) / Rmpfr::igamma(d/2,0)
 
+    if (!requireNamespace("Rmpfr")){
+      stop("`Rmpfr` package should be installed to use the option `mpfr = TRUE`.")
+    }
+
     a = Rmpfr::mpfr(a, precBits = precBits)
     d = Rmpfr::mpfr(d, precBits = precBits)
     grid = Rmpfr::mpfr(grid, precBits = precBits)
-
   }
   s_d = pi^(d/2) / gamma(d/2)
-  vector_Y = rep(NA , n)
   grid_g = rep(NA, n1)
 
   if (dopb){ pb = pbapply::startpb(max = n + n1) }
 
-  for (i in 1:n) {
-    # The matrix product is the expensive part (in high dimensions)
-    # and should not use the mpfr library.
-    # (mpfr is only used in the exponentiation, after)
-    vector_Y[i] = as.numeric(
-      -a + (a ^ (d/2) + ( (X[i,] - mu) %*% Sigma_m1 %*% (X[i,] - mu) )
-            ^ (d/2) ) ^ (2/d) )
-    if (dopb){ pbapply::setpb(pb, i) }
+  # `h` is always converted to a vector of size `n1`
+  if (length(h) == 1){
+    h = rep(h, length(grid))
+  } else if (length(h) != length(grid)){
+    stop("The length of `h` should be 1 or the length of the grid.")
   }
 
-  for (i1 in 1:n1){
-    z = grid[i1]
-    psiZ = as.numeric( -a + (a ^ (d/2) + z^(d/2)) ^ (2/d) )
-    psiPZ = z^(d/2 - 1) * (a ^ (d/2) + z^(d/2)) ^ (2/d - 1)
-    # This should use mean.default() (not the mpfr version) to save computation time.
-    h_ny = (1/h) * mean( kernelFun((psiZ - vector_Y)/h) + kernelFun((psiZ + vector_Y)/h) )
-    gn_z = 1/s_d * z^(-d/2 + 1) * psiPZ * h_ny
-    grid_g[i1] = as.numeric(gn_z)
+  if (length(a) == 1){
+    vector_Y = rep(NA , n)
 
-    if (dopb){ pbapply::setpb(pb, n + i1) }
+    for (i in 1:n) {
+      # The matrix product is the expensive part (in high dimensions)
+      # and should not use the mpfr library.
+      # (mpfr is only used in the exponentiation, after)
+      vector_Y[i] = as.numeric(
+        -a + (a ^ (d/2) + ( (X[i,] - mu) %*% Sigma_m1 %*% (X[i,] - mu) )
+              ^ (d/2) ) ^ (2/d) )
+      if (dopb){ pbapply::setpb(pb, i) }
+    }
+
+    for (i1 in 1:n1){
+      z = grid[i1]
+      psiZ = as.numeric( -a + (a ^ (d/2) + z^(d/2)) ^ (2/d) )
+      psiPZ = z^(d/2 - 1) * (a ^ (d/2) + z^(d/2)) ^ (2/d - 1)
+      # This should use mean.default() (not the mpfr version) to save computation time.
+      h_ny = (1/h[i1]) * base::mean( kernelFun((psiZ - vector_Y)/h[i1]) +
+                                      kernelFun((psiZ + vector_Y)/h[i1]) )
+      gn_z = 1/s_d * z^(-d/2 + 1) * psiPZ * h_ny
+      grid_g[i1] = as.numeric(gn_z)
+
+      if (dopb){ pbapply::setpb(pb, n + i1) }
+    }
+
+  } else if (length(a) == length(grid)) {
+
+    matrix_Y = matrix(nrow = n1, ncol = n)
+
+    for (i in 1:n) {
+      # The matrix product is the expensive part (in high dimensions)
+      # and should not use the mpfr library.
+      # (mpfr is only used in the exponentiation, after)
+      matrix_Y[, i] = as.numeric(
+        -a + (a ^ (d/2) + c( (X[i,] - mu) %*% Sigma_m1 %*% (X[i,] - mu) )
+              ^ (d/2) ) ^ (2/d) )
+      if (dopb){ pbapply::setpb(pb, i) }
+    }
+
+    for (i1 in 1:n1){
+      z = grid[i1]
+      psiZ = as.numeric( -a[i1] + (a[i1] ^ (d/2) + z^(d/2)) ^ (2/d) )
+      psiPZ = z^(d/2 - 1) * (a[i1] ^ (d/2) + z^(d/2)) ^ (2/d - 1)
+      # This should use mean.default() (not the mpfr version) to save computation time.
+      h_ny = (1/h[i1]) * base::mean( kernelFun((psiZ - matrix_Y[i1, ])/h[i1]) +
+                                      kernelFun((psiZ + matrix_Y[i1, ])/h[i1]) )
+      gn_z = 1/s_d * z^(-d/2 + 1) * psiPZ * h_ny
+      grid_g[i1] = as.numeric(gn_z)
+
+      if (dopb){ pbapply::setpb(pb, n + i1) }
+    }
+
+  } else {
+    stop("The length of `a` should be 1 or the length of the grid.")
   }
 
   if (dopb){ pbapply::closepb(pb) }
 
+  # We normalize by 1/sqrt(det(Sigma))
+  grid_g = grid_g * sqrt(det(Sigma_m1))
 
   return (grid_g)
 }
